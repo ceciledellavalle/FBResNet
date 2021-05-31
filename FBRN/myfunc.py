@@ -2,8 +2,12 @@
 Classes and Functions used in the FBResNet model.
 Classes
 -------
-    Physics  :
+    Physics  : Define the physical parameters of the ill-posed problem.
     MyMatmul : Multiplication with a kernel (for single or batch)
+Methods
+-------
+    Export_Data : save a signal or function x 
+    Export_hyper : hyperparameters of the neural network
      
 @author: Cecile Della Valle
 @date: 03/01/2021
@@ -173,3 +177,47 @@ class MyMatmul(nn.Module):
         x_tilde = torch.matmul(x,self.kernel)
         return x_tilde
 
+
+####################################################################
+####################################################################
+
+### EXPORT DATA
+def Export_Data(xdata,ydata,folder,name):
+    """
+    Save a signal in a chose folder
+    for plot purpose.
+    """
+    Npoint = np.size(xdata)
+    with open(folder+'/'+name+'.txt', 'w') as f:
+        f.writelines('xdata ydata \n')
+        for i in range(Npoint):
+            web_browsers = ['{0}'.format(xdata[i]),' ','{0} \n'.format(ydata[i])]
+            f.writelines(web_browsers)
+
+### PLOT GAMMA ALPHA MU
+def Export_hyper(resnet,x,x_b,folder):
+    """
+    Export hyperparameters of a neural network
+    """
+    nlayer = len(resnet.model.Layers)
+    gamma  = np.zeros(nlayer)
+    reg    = np.zeros(nlayer)
+    mu     = np.zeros(nlayer)
+    for i in range(0,nlayer):
+        gamma[i] = resnet.model.Layers[i].gamma_reg[0]
+        reg[i]   = resnet.model.Layers[i].gamma_reg[1]
+        mu[i]    = resnet.model.Layers[i].mu
+    # export
+    num    = np.linspace(0,nlayer-1,nlayer)
+    Export_Data(num, gamma, folder, 'gradstep')
+    Export_Data(num, reg, folder, 'reg')
+    Export_Data(num, mu, folder, 'prox')
+    # plot
+    fig, (ax0,ax1,ax2) = plt.subplots(1, 3)
+    ax0.plot(num,gamma)
+    ax0.set_title('gradstep')
+    ax1.plot(num,reg)
+    ax1.set_title('reg')
+    ax2.plot(num,mu)
+    ax2.set_title('prox')
+    plt.show()

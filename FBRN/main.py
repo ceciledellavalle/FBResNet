@@ -36,7 +36,7 @@ import matplotlib.pyplot as plt
 from FBRN.myfunc import Physics
 from FBRN.myfunc import MyMatmul
 from FBRN.model import MyModel
-from FBRN.posttreat import Export_Data
+from FBRN.myfunc import Export_Data
 
         
 class FBRestNet(nn.Module):
@@ -203,7 +203,7 @@ class FBRestNet(nn.Module):
                     save_blurred.append(x_blurred)
                     # Etape 4 : noise 
                     vn          = np.zeros(m)
-                    vn_temp     = np.random.randn(m)*self.physics.eigm**(-a)
+                    vn_temp     = np.random.randn(m)*self.physics.eigm**(-2*a)
                     vn[fmax:]   = vn_temp[fmax:]
                     vn_elt      = self.physics.BasisChangeInv(vn)
                     vn_elt      = vn_elt/np.linalg.norm(vn_elt)
@@ -317,7 +317,7 @@ class FBRestNet(nn.Module):
                 x_init   = torch.zeros(x_bias.size())
                 inv      = np.diag(self.physics.eigm**(2*self.physics.a))
                 tTTinv   = MyMatmul(inv)
-                x_init  = tTTinv(y) # no filtration of high frequences
+                x_init   = tTTinv(y) # no filtration of high frequences
                 x_init   = Variable(x_init,requires_grad=False)
                 # prediction
                 x_pred    = self.model(x_init,x_bias) 
@@ -346,7 +346,7 @@ class FBRestNet(nn.Module):
                         # definition of the initialisation tensor
                         x_init   = torch.zeros(x_bias.size())
                         tTTinv   = MyMatmul(inv)
-                        x_init  = tTTinv(y) # no filtration of high frequences
+                        x_init   = tTTinv(y) # no filtration of high frequences
                         x_init   = Variable(x_init,requires_grad=False)
                         # prediction
                         x_pred  = self.model(x_init,x_bias).detach()
@@ -360,8 +360,8 @@ class FBRestNet(nn.Module):
                     loss_val[epoch//self.freq_val] = loss_val[epoch//self.freq_val]/i
                     loss_init[epoch//self.freq_val] = loss_init[epoch//self.freq_val]/i
                 # print stat
-                print("epoch : ", epoch," ----- ","validation : ",loss_val[epoch//self.freq_val])
-                print("           ----- initial error :",loss_init[epoch//self.freq_val])
+                print("epoch : ", epoch," ----- ","validation : ",'{:.6}'.format(loss_val[epoch//self.freq_val]))
+                print("    ----- initial error : ",'{:.6}'.format(loss_init[epoch//self.freq_val]))
                 # Test Lipschitz
                 lip_cste[epoch//self.freq_val] = self.model.Lipschitz()
                 
@@ -385,7 +385,7 @@ class FBRestNet(nn.Module):
         # Export lip curve
         Export_Data(np.linspace(0,nb_val-1,nb_val),\
                     lip_cste,
-                    self.path+'Redaction/data',\
+                    self.path+'Datasets/data',\
                     'lip{}_{}_{}_{}.pt'.format(\
                     self.physics.nx,self.physics.m,self.physics.a,self.physics.p))
         # Save model
@@ -452,7 +452,7 @@ class FBRestNet(nn.Module):
         ax2.legend()
         plt.show()
         #
-        print("Erreur de sortir : ",avrg/counter)
+        print("Erreur de sortie : ",avrg/counter)
         print("Erreur initiale : ",avrg_in/counter)
         # return 
         return avrg/counter
@@ -485,14 +485,14 @@ class FBRestNet(nn.Module):
             u      = 1/nx**2*np.linspace(1,nx,nx)
             gauss = 0.5*gauss/np.dot(u,gauss)
         # export
-        Export_Data(t,gauss,'./Redaction/data','gauss_'+self.constr)
+        Export_Data(t,gauss,'./Datasets/data','gauss_'+self.constr)
         # obtenir les images bruitees par l' operateur d' ordre a
         # transform
         x_blurred  = self.physics.Compute(gauss).squeeze()
         yp         = self.physics.BasisChange(x_blurred)
         # Etape 4 : noise 
         vn          = np.zeros(m)
-        vn_temp     = np.random.randn(m)*self.physics.eigm**(-a)
+        vn_temp     = np.random.randn(m)*self.physics.eigm**(-2*a)
         vn[fmax:]   = vn_temp[fmax:]
         vn          = noise*np.linalg.norm(yp)*vn/np.linalg.norm(vn)
         x_blurred_n = x_blurred + self.physics.BasisChangeInv(vn)
@@ -515,10 +515,10 @@ class FBRestNet(nn.Module):
             xp[xp<0] = 0
         # export
         print(type(self.constr))
-        Export_Data(t,xp,'./Redaction/data',\
+        Export_Data(t,xp,'./Datasets/data',\
                         'gauss_pred_a{}'.format(self.physics.a)+self.constr)
         # plot
         plt.plot(t,gauss)
         plt.plot(t,xp)
-        print("x-xp/x =",np.linalg.norm(xp-gauss)/np.linalg.norm(gauss))
+        print("|x-xp|/|x| =",np.linalg.norm(xp-gauss)/np.linalg.norm(gauss))
         
